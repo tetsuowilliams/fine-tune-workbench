@@ -2,4 +2,5 @@
 
 
 class VanillaTuner:
-    def 
+    def __init__(self) -> None:
+        pass
