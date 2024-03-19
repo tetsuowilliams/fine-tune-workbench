@@ -6,6 +6,8 @@ name = "pypi"
 [packages]
 datasets = "*"
 torch = "*"
+peft = "*"
+torchvision = "*"
 
 [dev-packages]
 ipykernel = "*"

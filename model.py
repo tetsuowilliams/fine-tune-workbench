@@ -5,9 +5,9 @@ class MnistModule(torch.nn.Module):
         super().__init__()
         self.flatten = torch.nn.Flatten()
         self.seq = torch.nn.Sequential(
-            torch.nn.Linear(28*28, 1512),
+            torch.nn.Linear(28*28, 2000),
             torch.nn.ReLU(),
-            torch.nn.Linear(1512, 512),
+            torch.nn.Linear(2000, 512),
             torch.nn.ReLU(),
             torch.nn.Linear(512, 10)
         )

@@ -8,48 +8,53 @@ class Trainer:
     def __init__(self, device: str, 
                  model: torch.nn.Module, 
                  train_dataloader: DataLoader, 
-                 test_dataloader: DataLoader) -> None:
+                 test_dataloader: DataLoader, 
+                 epoch: int, 
+                 loss_fn: torch.nn.CrossEntropyLoss, 
+                 optimizer: torch.optim.SGD) -> None:
         self.device = device
         self.model = model
         self.train_dataloader = train_dataloader
         self.test_dataloader = test_dataloader
+        self.epoch = epoch
+        self.loss_fn = loss_fn
+        self.optimizer = optimizer
 
-    def train_for(self, epoch: int, loss_fn: torch.nn.CrossEntropyLoss, optimizer: torch.optim.SGD):
-        for i in range(epoch):
+    def train_and_test(self):
+        for i in range(self.epoch):
             print(f"Epoch: {i+1} ===================")
-            self.train(self.train_dataloader, self.model, loss_fn, optimizer)
-            self.test(self.test_dataloader, self.model, loss_fn)
+            self.train()
+            self.test()
 
-    def train(self, dataloader, model, loss_fn, optimizer):
-        model.train()
-        size = len(dataloader.dataset)
+    def train(self):
+        self.model.train()
+        size = len(self.train_dataloader.dataset)
 
-        for batch, (X, y) in enumerate(dataloader):
+        for batch, (X, y) in enumerate(self.train_dataloader):
             X, y = X.to(self.device), y.to(self.device)
 
-            prediction = model(X)
-            loss = loss_fn(prediction, y)
+            prediction = self.model(X)
+            loss = self.loss_fn(prediction, y)
 
             loss.backward()
-            optimizer.step()
-            optimizer.zero_grad()
+            self.optimizer.step()
+            self.optimizer.zero_grad()
 
             if batch % 100 == 0:
                 loss, current = loss.item(), (batch + 1) * len(X)
                 print(f"loss: {loss:>7f} [{current:>5d}/{size:>5d}]")
 
-    def test(self, dataloader, model, loss_fn):
-        size = len(dataloader.dataset)
-        num_batches = len(dataloader)
-        model.eval()
-
+    def test(self):
+        size = len(self.test_dataloader.dataset)
+        num_batches = len(self.test_dataloader)
+        self.model.eval()
         test_loss, correct = 0, 0
 
         with torch.no_grad():
-            for X, y in dataloader:
+            for X, y in self.test_dataloader:
                 X, y = X.to(self.device), y.to(self.device)
-                pred = model(X)
-                test_loss += loss_fn(pred, y).item()
+                pred = self.model(X)
+                test_loss += self.loss_fn(pred, y).item()
                 correct += (pred.argmax(1) == y).type(torch.float).sum().item()
 
         test_loss /= num_batches
