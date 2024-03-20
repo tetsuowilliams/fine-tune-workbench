@@ -1,34 +1,54 @@
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, TensorDataset
 import torchvision.datasets as ds
 from torchvision.transforms import ToTensor
 from model import MnistModule
 from trainer import Trainer
-from tuners.peft_tuner import PEFTTuner
-
-train_data = ds.FashionMNIST(root="data", train=True, download=True, transform=ToTensor())
-test_data = ds.FashionMNIST(root="data", train=False, download=True, transform=ToTensor())
+from tuners.peft_builder import PeftBuilder
+from data_prepper import DataPrepper
 
 batch_size = 64 
 device = "mps"
+data_prepper = DataPrepper()
 
-model = MnistModule().to(device)
-train_dataloader = DataLoader(train_data, batch_size=batch_size)
-test_dataloader = DataLoader(test_data, batch_size=batch_size)
+train_data_unfiltered = ds.FashionMNIST(
+    root="data", 
+    train=True, 
+    download=True, 
+    transform=ToTensor()
+)
+
+test_data_unfiltered = ds.FashionMNIST(
+    root="data", 
+    train=False, 
+    download=True, 
+    transform=ToTensor()
+)
+
+train_dataloader_all = data_prepper.build_dataset(train_data_unfiltered, [])
+test_dataloader_all = data_prepper.build_dataset(test_data_unfiltered, [])
+
+train_dataloader_no_7s = data_prepper.build_dataset(train_data_unfiltered, [7])
+test_dataloader_no_7s = data_prepper.build_dataset(test_data_unfiltered, [7])
+
+train_dataloader_only_7s = data_prepper.build_dataset(train_data_unfiltered, [0,1,2,3,4,5,6,8,9])
+
+base_model = MnistModule().to(device)
 loss_fn = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim.SGD( model.parameters(), lr=1e-3)
+optimizer = torch.optim.SGD(base_model.parameters(), lr=1e-3)
 
 trainer = Trainer(
     device=device, 
-    model = model, 
-    train_dataloader = train_dataloader, 
-    test_dataloader=test_dataloader, 
-    epoch = 6, 
+    epoch = 6,
     loss_fn=loss_fn, 
     optimizer=optimizer
 )
 
-#trainer.train_and_test()
+# Build our base model on the whole dataset except 7's.
+trainer.train_and_test("Building base model on no 7's", base_model, train_dataloader_no_7s, test_dataloader_no_7s)
 
-peft_tuner = PEFTTuner(device)
-peft_tuner.train_model(trainer)
+peft_builder = PeftBuilder(device)
+peft_model = peft_builder.get_model(base_model)
+trainer.train_and_test("PEFT fine tuning on only 7's", peft_model, train_dataloader_only_7s, test_dataloader_all)
+
+trainer.train_and_test("Vanilla tuning on only 7's", base_model, train_dataloader_only_7s, test_dataloader_all)

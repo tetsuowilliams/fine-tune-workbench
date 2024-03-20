@@ -7,6 +7,7 @@ class MnistModule(torch.nn.Module):
         self.seq = torch.nn.Sequential(
             torch.nn.Linear(28*28, 2000),
             torch.nn.ReLU(),
+            torch.nn.Dropout1d(0.9),
             torch.nn.Linear(2000, 512),
             torch.nn.ReLU(),
             torch.nn.Linear(512, 10)

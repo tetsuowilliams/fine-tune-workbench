@@ -1,14 +1,15 @@
 import copy
 from peft import LoraConfig, get_peft_model
-from trainer import Trainer
+from peft.peft_model import PeftModel
 
 
-class PEFTTuner:
+class PeftBuilder:
     def __init__(self, device: str) -> None:
         self.device = device
+        self.model_copy = None
 
-    def train_model(self, trainer: Trainer):
-        model_copy = copy.deepcopy(trainer.model)  
+    def get_model(self, model) -> PeftModel:
+        self.model_copy = copy.deepcopy(model)  
         
         config = LoraConfig(
             r=8,
@@ -16,8 +17,7 @@ class PEFTTuner:
             modules_to_save=["seq.4"],
         )
 
-        peft_model = get_peft_model(model_copy, config)
+        peft_model = get_peft_model(self.model_copy, config)
         print(peft_model.print_trainable_parameters())
-
-        trainer.train_and_test()
+        return peft_model
         
